@@ -1,0 +1,31 @@
+# Dependencies & build outputs
+node_modules/
+dist/
+release/
+exports/
+
+# Local test & smoke artifacts
+.asset-tools/
+.functional-check/
+.smoke-data/
+tmp-test/
+build-smoke-report.log
+opencode.json
+
+# Keep only real build resources in build/
+build/*
+!build/icon.ico
+!build/installer-safety.nsh
+
+# Stranded Electron runtime files in workspace root
+locales/
+resources/
+*.pak
+*.bin
+*.dll
+*.disabled
+vk_swiftshader_icd.json
+
+# OS / editor
+.DS_Store
+Thumbs.db

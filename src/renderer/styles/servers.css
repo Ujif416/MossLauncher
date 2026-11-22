@@ -1,0 +1,29 @@
+.servers { display: flex; flex-direction: column; gap: 22px; }
+.servers .view-head { display: flex; flex-direction: column; gap: 12px; }
+.servers__notice { min-height: 22px; }
+.servers__list { display: grid; gap: 20px; }
+.server-card { padding: 24px; min-width: 0; }
+.server-card__head { display: flex; align-items: flex-start; gap: 18px; }
+.server-card__icon { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 12px; image-rendering: pixelated; }
+.server-card__body { min-width: 0; flex: 1; }
+.server-card__body p { margin-top: 8px; }
+.server-card__version { color: var(--accent); font-size: 13px; }
+.server-card__online { width: 170px; flex: 0 0 170px; text-align: right; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.server-card__online--up { color: var(--accent); }
+.server-card__address { margin: 18px 0 4px; }
+.server-card__progress { height: 74px; padding-top: 12px; }
+.server-card__progress-head { display: flex; gap: 16px; align-items: center; height: 26px; }
+.server-card__message { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-dim); }
+.server-card__message--error { color: var(--danger); }
+.server-card__count { flex: 0 0 auto; font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12px; }
+.server-card__bar { height: 6px; overflow: hidden; border-radius: 4px; background: var(--surface-hover); margin-top: 8px; }
+.server-card__fill { height: 100%; border-radius: inherit; background: var(--accent); transition: width 120ms linear; }
+.server-card__bar--indeterminate .server-card__fill { animation: server-progress 1.5s ease-in-out infinite alternate; }
+@keyframes server-progress { from { transform: translateX(0); } to { transform: translateX(210%); } }
+.server-card__actions { display: flex; gap: 10px; align-items: center; }
+.server-card__play { width: 180px; flex: 0 0 180px; }
+.server-card__cancel { width: 122px; flex: 0 0 122px; }
+.server-mods__list { max-height: 360px; overflow: auto; }
+.server-mods__item { padding: 9px 4px; border-bottom: 1px solid var(--border-soft); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .server-card__fill { transition: none; animation: none !important; } }
+@media (max-width: 900px) { .server-card__head { flex-wrap: wrap; } .server-card__online { text-align: left; } .server-card__actions { flex-wrap: wrap; } }

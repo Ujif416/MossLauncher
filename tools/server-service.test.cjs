@@ -1,0 +1,48 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs'), os = require('os'), path = require('path');
+const mc = require('../src/main/minecraft'), java = require('../src/main/java'), auth = require('../src/main/auth');
+const catalog = require('../src/main/server-catalog'), sync = require('../src/main/server-sync');
+const servers = require('../src/main/servers');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const waitFor = async fn => { for (let i = 0; i < 100; i++) { if (fn()) return; await sleep(10); } throw new Error('service timeout'); };
+test('server task installs exact runtime, prevents double play, cancels before launch and reports auth failures', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'moss-service-')); t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const id = 'create-skybound', s = catalog.get(id), events = [], installs = [], launches = [];
+  let refreshes = 0, offline = false;
+  t.mock.method(catalog, 'refresh', async () => { refreshes++; return { warning: offline ? 'unavailable' : '' }; });
+  t.mock.method(require('../src/main/settings'), 'getSettings', () => ({ gameDir: root }));
+  servers.configure((type, value) => { if (type === 'state') events.push(value); });
+  t.mock.method(auth, 'getSelectedAccount', async () => ({ username: 'Fixture' }));
+  t.mock.method(catalog, 'index', async () => [{ path: 'mods/a.jar', size: 1, sha256: catalog.hash(Buffer.from('a')) }]);
+  t.mock.method(java, 'detectJava', async () => ({ found: { path: 'fixture', major: 21 } }));
+  t.mock.method(sync, 'sync', async () => {});
+  let releaseInstall;
+  t.mock.method(mc, 'installNeoForge', async (version, settings, _progress, loader) => {
+    installs.push({ version, loader, settings }); await new Promise(r => { releaseInstall = r; });
+    const v = mc.gameDirs(settings), expected = 'neoforge-' + loader; fs.mkdirSync(v.versionDir(expected), { recursive: true });
+    fs.writeFileSync(path.join(v.versionDir(expected), '.moss-installed'), '{}');
+    fs.writeFileSync(v.versionJson(expected), JSON.stringify({ id: expected, inheritsFrom: version, arguments: { game: ['--fml.neoForgeVersion', loader] } })); return expected;
+  });
+  t.mock.method(mc, 'installVersion', async () => {});
+  let exitGame;
+  t.mock.method(mc, 'launch', async (version, settings, _account, log, options) => {
+    launches.push({ version, settings, options }); log('[moss] process started'); return new Promise(r => { exitGame = r; });
+  });
+  assert.equal(servers.play(id).started, true); assert.equal(servers.play(id).started, false);
+  await waitFor(() => releaseInstall); servers.cancel(id); releaseInstall();
+  await waitFor(() => events.at(-1).state === 'idle' && !events.at(-1).cancelling);
+  assert.equal(launches.length, 0); assert.equal(installs[0].loader, '21.1.266'); assert.equal(installs[0].version, '1.21.1');
+  assert.equal(servers.runtimeReady(s, installs[0].settings), true);
+  assert.equal(servers.runtimeReady({ ...s, loader: { type: 'neoforge', version: '21.1.259' } }, installs[0].settings), false);
+  servers.play(id); await waitFor(() => launches.length === 1);
+  assert.equal(launches[0].version, 'neoforge-21.1.266'); assert.equal(launches[0].options.directConnect, 'createsky.tralala.club'); assert.equal(launches[0].options.instanceDir, catalog.paths(root, id).game);
+  assert.equal(installs.length, 1); exitGame({ code: 0 }); await waitFor(() => events.at(-1).state === 'idle');
+  t.mock.method(auth, 'getSelectedAccount', async () => null);
+  servers.play(id); await waitFor(() => events.at(-1).state === 'error'); assert.equal(events.at(-1).errorCode, 'account-missing'); assert.equal(launches.length, 1);
+  offline = true; servers.play(id); await waitFor(() => events.at(-1).state === 'error' && events.at(-1).message.includes('GitHub'));
+  assert.equal(launches.length, 1); assert.equal(refreshes, 4);
+  offline=false;t.mock.method(auth,'getSelectedAccount',async()=>({username:'Fixture'}));
+  assert.equal(servers.play(id).started,true);await waitFor(()=>launches.length===2);exitGame({code:0});await waitFor(()=>events.at(-1).state==='idle');
+});

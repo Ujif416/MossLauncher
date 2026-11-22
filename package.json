@@ -1,0 +1,61 @@
+{
+  "name": "mosslauncher",
+  "version": "1.0.13",
+  "description": "Modern Minecraft Java Edition launcher with Microsoft auth, mod management, and modpack sync",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable --x64",
+    "dev": "electron . --dev",
+    "build:release": "electron-builder --config electron-builder.release.cjs --win nsis portable --x64 --publish never",
+    "release:prepare": "node tools/prepare-release.cjs"
+  },
+  "keywords": [
+    "minecraft",
+    "launcher",
+    "electron"
+  ],
+  "author": "MossLauncher",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  },
+  "build": {
+    "appId": "com.mosslauncher.app",
+    "productName": "MossLauncher",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "!assets/mosslauncher-complete/manifest.json",
+      "!assets/mosslauncher-complete/CATALOG-*.png",
+      "!assets/mosslauncher-complete/README.md",
+      "!assets/mosslauncher-v2/**/*",
+      "!assets/mosslauncher/**/*",
+      "!assets/MossLauncher-Complete-Assets.zip"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "include": "build/installer-safety.nsh"
+    },
+    "artifactName": "MossLauncher.exe",
+    "compression": "store"
+  }
+}

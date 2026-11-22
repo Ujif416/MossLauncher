@@ -1,0 +1,62 @@
+const {app,BrowserWindow}=require('electron');
+const path=require('path'),fs=require('fs');
+const root=path.resolve(__dirname,'..');
+const source=process.argv.includes('--release') ? path.join(root,'release',require('../package.json').version,'win-unpacked/resources/app.asar') : process.argv.includes('--packaged') ? path.join(root,'dist/win-unpacked/resources/app.asar') : root;
+const report=path.join(root,'build-smoke-report.log');
+fs.writeFileSync(report,'');
+console.log=(...args)=>fs.appendFileSync(report,args.map(v=>typeof v==='string'?v:JSON.stringify(v)).join(' ')+'\n');
+console.error=console.log;
+process.stdout.on('error',()=>{});
+process.stderr.on('error',()=>{});
+const protocol=require(path.join(source,'src/main/protocol'));protocol.registerScheme();
+app.setPath('userData',path.join(root,'.smoke-data'));
+app.whenReady().then(async()=>{
+ const auth=require(path.join(source,'src/main/auth'));
+ const settings=require(path.join(source,'src/main/settings'));
+ const account=auth.addOffline('MossSmoke');
+ console.log('offline account',Boolean(account));
+ settings.setSettings({maxRamMb:3072});
+ if(settings.getSettings().maxRamMb!==3072) throw new Error('Settings persistence failed');
+ protocol.handle(path.join(source,'src/renderer'),path.join(source,'assets/mosslauncher-complete'));
+ const w=new BrowserWindow({show:false,width:1440,height:960,webPreferences:{backgroundThrottling:false,preload:path.join(source,'src/preload/preload.js'),sandbox:false,contextIsolation:true}});
+ require(path.join(source,'src/main/ipc-handlers')).register(w);
+ w.webContents.on('console-message',(...args)=>console.log('CONSOLE',...args.slice(1)));
+ await w.loadURL('app://launcher/index.html');
+ await w.webContents.executeJavaScript(`(()=>{const style=document.createElement('style');style.textContent='*,*::before,*::after{animation:none!important;transition:none!important}';document.head.append(style)})()`);
+ await new Promise(r=>setTimeout(r,2000));
+ for(const view of ['home','settings','versions','mods','modpacks','accounts','logs']){
+ await w.webContents.executeJavaScript(`import('./app-state.js').then(({appState})=>appState.navigateTo('${view}'))`);
+ await new Promise(r=>setTimeout(r,600));
+ console.log(view,await w.webContents.executeJavaScript(`JSON.stringify({text:document.querySelector('.content').innerText.slice(0,350),badImages:[...document.images].filter(i=>i.complete&&!i.naturalWidth).map(i=>i.src)})`));
+ fs.mkdirSync(path.join(root,'build'),{recursive:true});
+ if(['home','settings'].includes(view))fs.writeFileSync(path.join(root,'build',view+'-smoke.png'),(await w.webContents.capturePage()).toPNG());
+ }
+ await w.webContents.executeJavaScript(`import('./app-state.js').then(({appState})=>{appState.update({selectedVersionId:'neoforge-21.1.266'});appState.navigateTo('mods')})`);
+ const waitFor = async expression => {
+   for(let i=0;i<80;i++){if(await w.webContents.executeJavaScript(expression))return;await new Promise(r=>setTimeout(r,250));}
+   throw new Error('UI condition timed out: '+expression);
+ };
+ await waitFor(`document.querySelector('.content').innerText.includes('Страница 1 из')`);
+ const first=await w.webContents.executeJavaScript(`document.querySelector('.mod-card__title span')?.textContent`);
+ await w.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(b=>b.textContent==='Далее').click()`);
+ await waitFor(`document.querySelector('.content').innerText.includes('Страница 2 из')`);
+ const second=await w.webContents.executeJavaScript(`document.querySelector('.mod-card__title span')?.textContent`);
+ if(!first||!second||first===second)throw new Error('Mod pagination did not change results');
+ console.log('PASS UI mod pagination',first,second);
+ await new Promise(r=>setTimeout(r,1200));
+ fs.writeFileSync(path.join(root,'build/mods-page2.png'),(await w.webContents.capturePage()).toPNG());
+ await w.webContents.executeJavaScript(`import('./app-state.js').then(({appState})=>appState.navigateTo('versions'))`);
+ await w.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(b=>b.textContent==='Каталог').click()`);
+ await waitFor(`document.querySelectorAll('.version-card').length>0`);
+ await w.webContents.executeJavaScript(`(()=>{const s=document.querySelector('.versions__toolbar select');s.value='neoforge';s.dispatchEvent(new Event('change'));const q=document.querySelector('.versions__search input');q.value='1.21.1';q.dispatchEvent(new Event('input'));})()`);
+ await new Promise(r=>setTimeout(r,400));
+ await w.webContents.executeJavaScript(`[...document.querySelectorAll('.version-card')].find(c=>c.querySelector('.version-card__title').textContent==='1.21.1').querySelector('button').click()`);
+ await waitFor(`!!document.querySelector('.modal select')`);
+ const options=await w.webContents.executeJavaScript(`[...document.querySelector('.modal select').options].map(o=>o.value)`);
+ if(!options.includes('21.1.265')||!options.includes('21.1.266'))throw new Error('Loader versions missing in UI');
+ console.log('PASS UI loader selection',options.length);
+ await new Promise(r=>setTimeout(r,1200));
+ fs.writeFileSync(path.join(root,'build/loader-selection.png'),(await w.webContents.capturePage()).toPNG());
+ console.log('SMOKE COMPLETE');
+ app.exit();
+}).catch(e=>{console.error(e);app.exit(1)});

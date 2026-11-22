@@ -1,0 +1,32 @@
+name: Publish client pack
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pack/**'
+      - 'launcher/servers.json'
+      - 'launcher/publish.py'
+      - '.github/workflows/publish-pack.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish-client-pack
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Generate and publish verified file index
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 launcher/publish.py
+          git push origin HEAD:main

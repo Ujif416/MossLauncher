@@ -1,0 +1,202 @@
+/* ============================================================
+   extras.css — стили для новых модулей:
+   анализатор крашей, changelog серверов, автообновление,
+   синхронизация options.txt и галерея скриншотов.
+   ============================================================ */
+
+/* ---------- Crash Analyzer Banner ---------- */
+.crash-banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  margin-bottom: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.crash-banner--warning { border-left-color: var(--warning); }
+.crash-banner--info { border-left-color: var(--accent); }
+.crash-banner__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.crash-banner__title { font-weight: 600; font-size: 15px; }
+.crash-banner__summary { color: var(--text-dim); font-size: 13px; overflow-wrap: anywhere; }
+.crash-banner__hints {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text-dim);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.crash-banner__culprits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.crash-banner__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+}
+
+/* ---------- Server Revision & Changelog ---------- */
+.server-card__revision {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  min-height: 18px;
+}
+.server-card__revision--update {
+  color: var(--accent);
+  font-weight: 500;
+}
+.changelog-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-height: 440px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.changelog-entry {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.changelog-entry--pending { border-color: var(--accent-dim); }
+.changelog-entry__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.changelog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-family: var(--mono);
+}
+.changelog-item--add { color: var(--accent); }
+.changelog-item--upd { color: var(--warning); }
+.changelog-item--rem { color: var(--danger); }
+
+/* ---------- Settings: RAM Helper, Updater, Options Sync ---------- */
+.ram-helper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.ram-helper__info {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-basis: 100%;
+}
+.updater-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.updater-notes {
+  white-space: pre-wrap;
+  font-size: 12px;
+  color: var(--text-dim);
+  max-height: 140px;
+  overflow: auto;
+  background: var(--bg);
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-soft);
+}
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  font-size: 13px;
+}
+.check-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+
+/* ---------- Screenshots Gallery ---------- */
+.shots__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--s-4);
+  margin-top: var(--s-3);
+}
+.shot-card {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.shot-card__thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  display: block;
+}
+.shot-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--t-med) var(--ease);
+}
+.shot-card__thumb:hover img {
+  transform: scale(1.03);
+}
+.shot-card__foot {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shot-card__info {
+  flex: 1;
+  min-width: 0;
+}
+.shot-card__name { font-size: 13px; font-weight: 500; }
+.shot-card__sub { font-size: 11px; margin-top: 2px; }
+.shots__preview-img {
+  width: 100%;
+  max-height: 62vh;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+  background: var(--bg);
+}
+.shots__preview-meta {
+  gap: 12px;
+  align-items: center;
+}
