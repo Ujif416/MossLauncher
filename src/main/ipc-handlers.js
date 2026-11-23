@@ -24,6 +24,7 @@ const jvmPresets = require('./jvm-presets');
 const crashAnalyzer = require('./crash-analyzer');
 const updater = require('./updater');
 const profileTools = require('./profile-tools');
+const horizon = require('./horizon');
 
 let lastWindow = null;
 let recentGameLines = [];
@@ -442,6 +443,61 @@ function register(window) {
     await shell.trashItem(full);
     return true;
   }, 'screenshots');
+
+  // ---------- horizon (Rust Minecraft client) ----------
+  wrap(IPC.HORIZON_LIST, () => horizon.listReleases(settingsMod.getSettings()), 'horizon');
+  wrap(IPC.HORIZON_INSTALL, (_e, tag) => horizon.installVersion(tag, settingsMod.getSettings(), (p) => {
+    send(EVENTS.HORIZON_STATE, p);
+  }), 'horizon');
+  wrap(IPC.HORIZON_PREPARE, (_e, tag) => horizon.prepareAssets(
+    tag,
+    settingsMod.getSettings(),
+    (line) => { pushGameLine(line); send(EVENTS.GAME_LOG, { versionId: 'horizon:' + tag, line }); },
+    (p) => send(EVENTS.HORIZON_STATE, p)
+  ), 'horizon');
+  wrap(IPC.HORIZON_LAUNCH, async (_e, input) => {
+    const tag = typeof input === 'string' ? input : input?.tag;
+    const server = typeof input === 'object' && input ? input.server : null;
+    const s = settingsMod.getSettings();
+    const account = await auth.getSelectedAccount({ fresh: true }).catch(() => null);
+    recentGameLines = [];
+    lastInstanceDir = horizon.horizonDirs(s).game;
+    horizon.launch(
+      tag,
+      s,
+      account,
+      (line) => { pushGameLine(line); send(EVENTS.GAME_LOG, { versionId: 'horizon:' + (tag || 'nightly'), line }); },
+      (st) => {
+        send(EVENTS.HORIZON_STATE, st);
+        if (st.state === 'running') {
+          if (s.keepLauncherOpen === false) lastWindow?.hide();
+          else if (s.closeOnLaunch) lastWindow?.minimize();
+        } else if (st.state === 'idle' || st.state === 'error') {
+          restoreMainWindow();
+        }
+      },
+      { server }
+    ).then(({ code, instanceDir }) => {
+      if (code !== 0) {
+        const report = crashAnalyzer.analyzeLogs(recentGameLines, { exitCode: code, instanceDir });
+        send(EVENTS.CRASH_REPORT, { ...report, versionId: 'horizon:' + (tag || 'nightly') });
+      }
+      toast(code === 0 ? 'info' : 'error', `Horizon завершился (код ${code})`);
+    }).catch((e) => {
+      restoreMainWindow();
+      send(EVENTS.HORIZON_STATE, { state: 'error', tag: tag || 'nightly', message: e.message });
+      toast('error', e.message);
+    });
+    return { launched: true, tag: tag || 'nightly' };
+  }, 'horizon');
+  wrap(IPC.HORIZON_STOP, (_e, tag) => ({ stopped: horizon.stop(tag) }), 'horizon');
+  wrap(IPC.HORIZON_REMOVE, (_e, tag) => horizon.removeVersion(tag, settingsMod.getSettings()), 'horizon');
+  wrap(IPC.HORIZON_FOLDER, async () => {
+    const dir = horizon.horizonDirs(settingsMod.getSettings()).root;
+    ensureDir(dir);
+    await shell.openPath(dir);
+    return true;
+  }, 'horizon');
 
   // ---------- system ----------
   ipcMain.handle(IPC.GET_SYSTEM_INFO, () => {

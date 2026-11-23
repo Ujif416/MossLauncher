@@ -87,7 +87,20 @@ function listProfiles(settings = {}) {
     } catch {}
   }
 
-  // 3. Инстансы версий: <gameDir>/instances/<id>
+  // 3. Профиль Horizon (Rust): <gameDir>/horizon/game
+  const horizonGame = path.join(root, 'horizon', 'game');
+  if (fs.existsSync(horizonGame)) {
+    profiles.push({
+      id: 'horizon:default',
+      label: 'Horizon (Rust)',
+      kind: 'horizon',
+      dir: horizonGame,
+      hasOptions: fs.existsSync(path.join(horizonGame, 'options.txt')),
+      screenshotCount: countScreenshots(horizonGame),
+    });
+  }
+
+  // 4. Инстансы версий: <gameDir>/instances/<id>
   const instancesDir = path.join(root, 'instances');
   if (fs.existsSync(instancesDir)) {
     try {

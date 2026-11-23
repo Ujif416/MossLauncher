@@ -46,9 +46,11 @@ export function screenshotsView(container) {
         .map((p) => ({ value: p.id, label: `${p.label} (${p.screenshotCount})` })),
     ];
     if (!opts.some((o) => o.value === selectedProfile)) selectedProfile = 'all';
-    const sel = selectInput(opts, selectedProfile, (val) => {
-      selectedProfile = val;
-      renderGrid();
+    const sel = selectInput(selectedProfile, opts, {
+      onChange: (e) => {
+        selectedProfile = e.target.value;
+        renderGrid();
+      },
     });
     filterSlot.replaceChildren(sel);
   }

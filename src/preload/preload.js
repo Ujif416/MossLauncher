@@ -112,6 +112,15 @@ const moss = {
     copy: (relPath) => invoke(IPC.COPY_SCREENSHOT, relPath),
     remove: (relPath) => invoke(IPC.DELETE_SCREENSHOT, relPath),
   },
+  horizon: {
+    list: () => invoke(IPC.HORIZON_LIST),
+    install: (tag) => invoke(IPC.HORIZON_INSTALL, tag),
+    prepare: (tag) => invoke(IPC.HORIZON_PREPARE, tag),
+    launch: (tag) => invoke(IPC.HORIZON_LAUNCH, tag),
+    stop: (tag) => invoke(IPC.HORIZON_STOP, tag),
+    remove: (tag) => invoke(IPC.HORIZON_REMOVE, tag),
+    folder: () => invoke(IPC.HORIZON_FOLDER),
+  },
   system: {
     openFolder: (p) => invoke(IPC.OPEN_FOLDER, p),
     browseFolder: (kind) => invoke(IPC.BROWSE_FOLDER, kind),
@@ -131,6 +140,7 @@ const moss = {
     onServerState: h => on(EVENTS.SERVER_STATE, h),
     onCrashReport: h => on(EVENTS.CRASH_REPORT, h),
     onUpdateProgress: h => on(EVENTS.UPDATE_PROGRESS, h),
+    onHorizonState: h => on(EVENTS.HORIZON_STATE, h),
   },
 };
 

@@ -143,13 +143,14 @@ async function installJava(majorVersion, onProgress) {
   return { path: fs.existsSync(javaw) ? javaw : path.join(destDir, 'bin', 'java.exe'), major: majorVersion };
 }
 
-/** Which Java major a Minecraft version needs (rough, covers modern releases). */
+/** Which Java major a Minecraft version needs (covers 1.x and 26.x+ releases). */
 function requiredJavaForMc(mcVersion) {
-  // >= 1.20.5 → 21, >= 1.18 → 17, >= 1.17 → 16, else 8
-  const m = mcVersion.match(/^(\d+)\.(\d+)(?:\.(\d+))?/);
+  const m = String(mcVersion || '').match(/^(\d+)\.(\d+)(?:\.(\d+))?/);
   if (!m) return 17;
+  const major = parseInt(m[1], 10);
   const minor = parseInt(m[2], 10);
   const patch = parseInt(m[3] || '0', 10);
+  if (major >= 26) return 25;
   if (minor > 20 || (minor === 20 && patch >= 5)) return 21;
   if (minor >= 18) return 17;
   if (minor >= 17) return 16;

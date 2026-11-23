@@ -10,6 +10,7 @@ const crashAnalyzer = require('../src/main/crash-analyzer');
 const serverChangelog = require('../src/main/server-changelog');
 const updater = require('../src/main/updater');
 const profileTools = require('../src/main/profile-tools');
+const horizon = require('../src/main/horizon');
 
 test('jvm-presets resolves auto/zgc/g1gc/aikar/custom and recommends safe RAM', () => {
   const auto21Heavy = jvmPresets.resolveJvmFlags({ maxRamMb: 8192, jvmPreset: 'auto' }, 21);
@@ -140,4 +141,23 @@ test('profile-tools discovers profiles, syncs options.txt with backup, and lists
   assert.equal(shots[0].profileId, 'server:create-skybound');
   assert.ok(profileTools.resolveSafeScreenshot(settings, shots[0].relPath).endsWith('2026-11-22_14.00.00.png'));
   assert.throws(() => profileTools.resolveSafeScreenshot(settings, '../../evil.png'), /Недопустимый путь/);
+});
+
+test('horizon parses SHA256SUMS, lists installed builds and rejects unsafe tags', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'moss-horizon-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const sha = 'b'.repeat(64);
+  assert.equal(horizon.parseSha256Sums(`${sha}  horizon-windows-x64.zip\n`, 'horizon-windows-x64.zip'), sha);
+
+  const vdir = path.join(root, 'horizon', 'versions', 'nightly');
+  fs.mkdirSync(vdir, { recursive: true });
+  fs.writeFileSync(path.join(vdir, 'horizon-client.exe'), 'stub');
+  fs.writeFileSync(path.join(vdir, 'horizon-prepare.exe'), 'stub');
+
+  const installed = horizon.listInstalled({ gameDir: root });
+  assert.equal(installed.length, 1);
+  assert.equal(installed[0].tag, 'nightly');
+  assert.ok(installed[0].clientExe.endsWith('horizon-client.exe'));
+  assert.throws(() => horizon.removeVersion('../evil', { gameDir: root }), /Некорректный тег/);
 });

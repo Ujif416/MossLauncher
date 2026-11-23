@@ -36,13 +36,12 @@ function isNewerVersion(latest, current) {
 
 function currentAppVersion() {
   try {
-    if (app && typeof app.getVersion === 'function') return app.getVersion();
+    return require('../../package.json').version;
   } catch {}
   try {
-    return require('../../package.json').version;
-  } catch {
-    return '0.0.0';
-  }
+    if (app && typeof app.getVersion === 'function') return app.getVersion();
+  } catch {}
+  return '0.0.0';
 }
 
 function isPortableBuild() {
@@ -144,7 +143,7 @@ async function downloadAndInstall(updateInfo, onProgress = () => {}) {
 
   onProgress({ stage: 'download', done: 0, total: updateInfo.asset.size || 0, file: safeName });
   await net.downloadFile(updateInfo.asset.url, dest, {
-    onProgress: (done, total) => onProgress({ stage: 'download', done, total: total || updateInfo.asset.size || 0, file: safeName }),
+    onProgress: (p) => onProgress({ stage: 'download', done: p?.done || 0, total: p?.total || updateInfo.asset.size || 0, file: safeName }),
   });
 
   if (updateInfo.checksumAsset?.url) {

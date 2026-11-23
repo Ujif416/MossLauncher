@@ -9,7 +9,22 @@ import { el, icon, asset } from '../ui-utils.js';
 import { button, progressBar, spinner, statusDot } from '../ui/components.js';
 import { appState, selectVersion } from '../app-state.js';
 import { accountHead } from '../account-head.js';
-import { greetingService } from '../greetings.js';
+import { greetingService, getGreetingPeriod } from '../greetings.js';
+
+const PERIOD_LABELS = {
+  morning: 'Утро',
+  day: 'День',
+  evening: 'Вечер',
+  night: 'Ночь',
+};
+
+const PRESET_SHORT = {
+  auto: 'Авто',
+  g1gc: 'G1GC',
+  zgc: 'ZGC',
+  aikar: 'Aikar',
+  custom: 'Свой',
+};
 
 const STAGE_LABELS = {
   loader: 'Установка загрузчика',
@@ -33,50 +48,117 @@ export function homeView(container) {
     return true;
   }
 
-  const art = el('div', { className: 'home__art' }, el('img', { src: asset('backgrounds', 'forest-mist.png'), alt: '' }));
-  const eyebrow = el('div', { className: 'home__eyebrow' }, 'MossLauncher');
+  const artImg = el('img', { src: asset('backgrounds', 'forest-mist.png'), alt: '' });
+  const art = el('div', { className: 'home__art' }, artImg);
+  const eyebrowText = el('span', {}, 'MossLauncher');
+  const eyebrow = el('div', { className: 'home__eyebrow' }, eyebrowText);
   const title = el('h1', { className: 'home__title home__greeting-title' });
   const subtitle = el('p', { className: 'home__subtitle home__greeting-description' });
-  const unsubscribeGreeting = greetingService.subscribe(g => {
-    title.textContent = g.title;
-    subtitle.textContent = g.description;
-  });
 
   const playSlot = el('div', { className: 'home__play' });
   const versionSlot = el('div', { className: 'home__version' });
   const progressSlot = el('div', { className: 'home__progress-wrap' });
 
   const side = el('div', { className: 'home__side' });
-  const topline = el('div', { className: 'home__topline' });
-
-  container.append(
-    el(
-      'div',
-      { className: 'home' },
-      art,
-      el('div', { className: 'home__lead' }, eyebrow, el('div', { className: 'home__greeting' }, title, subtitle), el('div', { className: 'home__actions' }, playSlot, versionSlot, progressSlot)),
-      side,
-      topline
-    )
+  const accountSlot = el('div', { className: 'home__account' });
+  const topline = el('div', { className: 'home__topline' }, el('h2', {}, 'Главная'), accountSlot);
+  const hero = el(
+    'section',
+    { className: 'home__hero' },
+    art,
+    el('div', { className: 'home__lead' }, eyebrow, el('div', { className: 'home__greeting' }, title, subtitle), el('div', { className: 'home__actions' }, playSlot, versionSlot, progressSlot))
   );
+
+  const homeEl = el(
+    'div',
+    { className: 'home' },
+    topline,
+    hero,
+    side
+  );
+  container.append(homeEl);
+
+  function applyPeriod(g) {
+    const idPrefix = String(g?.id || '').split('-')[0];
+    const period = PERIOD_LABELS[idPrefix] ? idPrefix : getGreetingPeriod(new Date());
+    homeEl.dataset.period = period;
+    const bgFile = (period === 'morning' || period === 'day') ? 'forest-sunrise.png' : 'forest-mist.png';
+    const nextSrc = asset('backgrounds', bgFile);
+    if (artImg.getAttribute('src') !== nextSrc) artImg.src = nextSrc;
+    eyebrowText.textContent = `MossLauncher · ${PERIOD_LABELS[period]}`;
+  }
+
+  const unsubscribeGreeting = greetingService.subscribe(g => {
+    title.textContent = g.title;
+    subtitle.textContent = g.description;
+    applyPeriod(g);
+  });
+
+  // Живой статус сервера Create Skybound прямо на главной (обновляется на месте)
+  let disposed = false;
+  let serverInfo = { state: 'loading', playersOnline: null, playersMax: null };
+  const serverMetaEl = el('span', { className: 'home__card__meta' }, 'Проверка онлайна…');
+  const serverDotEl = statusDot('neutral');
+  const serverCardEl = el(
+    'button',
+    { className: 'home__card home__card--server', type: 'button', onClick: () => appState.navigateTo('servers') },
+    el('span', { className: 'home__card__icon' }, icon('servers')),
+    el(
+      'span',
+      { className: 'home__card__body' },
+      el('span', { className: 'home__card__title-row' }, el('span', { className: 'home__card__title' }, 'Create Skybound'), serverDotEl),
+      serverMetaEl
+    ),
+    el('span', { className: 'home__card__chev' }, icon('chevron-right'))
+  );
+
+  function updateServerCard() {
+    if (serverInfo.state === 'online') {
+      serverDotEl.className = 'dot dot--online';
+      serverMetaEl.textContent = `Онлайн · ${serverInfo.playersOnline ?? '—'} / ${serverInfo.playersMax ?? '—'} игроков`;
+    } else if (serverInfo.state === 'loading') {
+      serverDotEl.className = 'dot';
+      serverMetaEl.textContent = 'Проверка онлайна…';
+    } else {
+      serverDotEl.className = 'dot dot--offline';
+      serverMetaEl.textContent = 'Открыть серверную сборку';
+    }
+  }
+
+  async function pollHomeServer() {
+    try {
+      const st = await window.moss.servers.status('create-skybound');
+      if (disposed) return;
+      serverInfo = st || { state: 'unknown' };
+      updateServerCard();
+    } catch {
+      if (disposed) return;
+      serverInfo = { state: 'unknown' };
+      updateServerCard();
+    }
+  }
 
   function render() {
     const s = appState.state;
-    if (changed('account', [s.accounts, s.selectedAccount])) renderAccount(topline, s);
+    if (changed('account', [s.accounts, s.selectedAccount])) renderAccount(accountSlot, s);
     if (changed('play', [s.selectedVersionId, s.runningVersions, s.selectedAccount, s.installedVersions, s.downloads.some(d => d.scope === 'version' && d.stage !== 'done'), s.gameState])) renderPlay(playSlot, s);
     if (changed('picker', [s.selectedVersionId, s.installedVersions])) {
       disposePicker();
       disposePicker = renderVersionPicker(versionSlot, s);
     }
     renderProgress(progressSlot, s);
-    if (changed('side', [s.selectedVersionId, s.mods.length, s.packs.length, s.settings.maxRamMb])) renderSide(side, s);
+    if (changed('side', [s.selectedVersionId, s.mods.length, s.packs.length, s.settings.maxRamMb, s.settings.jvmPreset])) renderSide(side, s, serverCardEl);
   }
 
   render();
+  pollHomeServer();
+  const serverTimer = setInterval(pollHomeServer, 30000);
   const unsubscribe = appState.subscribe(render);
 
   return {
     unmount() {
+      disposed = true;
+      clearInterval(serverTimer);
       unsubscribe();
       unsubscribeGreeting();
       disposePicker();
@@ -320,14 +402,15 @@ function renderProgress(host, s) {
   host.querySelector('.progress__fill').style.width = `${percent}%`;
 }
 
-function renderSide(host, s) {
+function renderSide(host, s, serverCardEl) {
   const versionId = s.selectedVersionId;
   const modCount = s.mods.length;
   const packCount = s.packs.length;
 
   host.replaceChildren(
-    quickCard('mods', 'Моды', versionId ? `${modCount} установлено · ${versionId}` : 'Выберите версию', () => appState.navigateTo('mods')),
-    quickCard('archive', 'Сборки из GitHub', packCount ? `${packCount} синхронизировано` : 'Ещё не настроены', () => appState.navigateTo('modpacks')),
+    serverCardEl,
+    quickCard('mods', 'Моды', versionId ? `${modCount} шт. · ${versionId}` : 'Выберите версию', () => appState.navigateTo('mods')),
+    quickCard('archive', 'Сборки', packCount ? `${packCount} синхронизировано` : 'GitHub / Modrinth', () => appState.navigateTo('modpacks')),
     quickCard('java', 'Java и память', describeRam(s.settings), () => appState.navigateTo('settings'))
   );
 }
@@ -349,7 +432,8 @@ function quickCard(iconName, title, meta, onClick) {
 
 export function describeRam(settings) {
   const max = Number(settings.maxRamMb) || 4096;
-  return `${Math.round(max / 1024 * 10) / 10} ГБ памяти`;
+  const preset = PRESET_SHORT[settings.jvmPreset] || PRESET_SHORT.auto;
+  return `${Math.round(max / 1024 * 10) / 10} ГБ · ${preset}`;
 }
 
 async function refreshInstalled() {

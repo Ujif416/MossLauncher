@@ -65,6 +65,7 @@ const DEFAULTS = {
   githubToken: '',
   language: 'ru',
   theme: 'dark',
+  railCollapsed: false,
   closeOnLaunch: false,
   lastVersionId: '',
   gameArgs: '',
@@ -153,6 +154,14 @@ const IPC = {
   LIST_SCREENSHOTS: 'screenshots:list',
   COPY_SCREENSHOT: 'screenshots:copy',
   DELETE_SCREENSHOT: 'screenshots:delete',
+  // horizon (Rust Minecraft client)
+  HORIZON_LIST: 'horizon:list',
+  HORIZON_INSTALL: 'horizon:install',
+  HORIZON_PREPARE: 'horizon:prepare',
+  HORIZON_LAUNCH: 'horizon:launch',
+  HORIZON_STOP: 'horizon:stop',
+  HORIZON_REMOVE: 'horizon:remove',
+  HORIZON_FOLDER: 'horizon:folder',
   // system
   OPEN_FOLDER: 'system:open-folder',
   BROWSE_FOLDER: 'system:browse-folder',
@@ -176,6 +185,7 @@ const EVENTS = {
   SERVER_STATE: 'event:server-state',
   CRASH_REPORT: 'event:crash-report',
   UPDATE_PROGRESS: 'event:update-progress',
+  HORIZON_STATE: 'event:horizon-state',
 };
 
 module.exports = { PATHS, API, DEFAULTS, GAME, IPC, EVENTS, MS_CLIENT_ID, MS_SCOPE };

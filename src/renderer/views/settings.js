@@ -32,7 +32,7 @@ export function settingsView(container) {
       saveStatus.textContent = 'Ошибка сохранения';
       appState.toast(error.message, 'error');
     });
-    appState.update({ settings: { ...s } });
+    appState.update({ settings: { ...appState.state.settings, ...p } });
     saveStatus.textContent = 'Сохранено';
     setTimeout(() => { if (!disposed) saveStatus.textContent = ''; }, 1500);
   }
@@ -64,11 +64,14 @@ export function settingsView(container) {
   }
 
   const presetSelect = selectInput(
-    PRESET_FALLBACK.map((p) => ({ value: p.id, label: p.label })),
     s.jvmPreset || 'auto',
-    (val) => {
-      patch({ jvmPreset: val });
-      updatePresetDesc(val);
+    PRESET_FALLBACK.map((p) => ({ value: p.id, label: p.label })),
+    {
+      onChange: (e) => {
+        const val = e.target.value;
+        patch({ jvmPreset: val });
+        updatePresetDesc(val);
+      },
     }
   );
   updatePresetDesc(s.jvmPreset || 'auto');
@@ -283,12 +286,14 @@ export function settingsView(container) {
         : null;
 
     updaterSlot.replaceChildren(
-      el('div', { className: 'row' }, chip(`v${ver}`), chip(kind)),
-      repoField,
-      autoToggle,
-      el('div', { className: 'row' }, button('Проверить обновления', { variant: 'secondary', iconName: 'check-updates', disabled: updating, onClick: checkUpdates })),
-      updateProgressText,
-      statusBox
+      ...[
+        el('div', { className: 'row' }, chip(`v${ver}`), chip(kind)),
+        repoField,
+        autoToggle,
+        el('div', { className: 'row' }, button('Проверить обновления', { variant: 'secondary', iconName: 'check-updates', disabled: updating, onClick: checkUpdates })),
+        updateProgressText,
+        statusBox,
+      ].filter(Boolean)
     );
   }
 
@@ -334,12 +339,14 @@ export function settingsView(container) {
       }
 
       const sourceSel = selectInput(
-        withOptions.map((p) => ({ value: p.id, label: p.label })),
         sourceId,
-        (val) => {
-          sourceId = val;
-          selectedTargets.delete(sourceId);
-          renderTargets();
+        withOptions.map((p) => ({ value: p.id, label: p.label })),
+        {
+          onChange: (e) => {
+            sourceId = e.target.value;
+            selectedTargets.delete(sourceId);
+            renderTargets();
+          },
         }
       );
 

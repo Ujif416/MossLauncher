@@ -18,6 +18,7 @@ import { accountsView } from './views/accounts.js';
 import { settingsView } from './views/settings.js';
 import { logsView } from './views/logs.js';
 import { screenshotsView } from './views/screenshots.js';
+import { horizonView } from './views/horizon.js';
 
 const VIEWS = {
   home: homeView,
@@ -25,6 +26,7 @@ const VIEWS = {
   mods: modsView,
   modpacks: modpacksView,
   servers: serversView,
+  horizon: horizonView,
   screenshots: screenshotsView,
   accounts: accountsView,
   settings: settingsView,
@@ -37,6 +39,7 @@ const NAV = [
   { id: 'mods', icon: 'mods', title: 'Моды' },
   { id: 'modpacks', icon: 'archive', title: 'Сборки' },
   { id: 'servers', icon: 'servers', title: 'Серверы' },
+  { id: 'horizon', icon: 'rocket', title: 'Horizon (Rust)' },
   { id: 'screenshots', icon: 'screenshot', title: 'Скриншоты' },
   { id: 'logs', icon: 'terminal', title: 'Логи' },
 ];
@@ -63,7 +66,9 @@ async function boot() {
   const root = document.getElementById('app');
   root.replaceChildren();
   contentEl = el('div', { className: 'content' });
-  root.append(el('div', { className: 'shell' }, buildRail(), contentEl));
+  const shell = el('div', { className: 'shell' });
+  shell.append(buildRail(shell, state.settings.railCollapsed === true), contentEl);
+  root.append(shell);
 
   appState.subscribe((s) => {
     if (s.currentView !== mountedId) renderView(s.currentView);
@@ -87,16 +92,37 @@ async function boot() {
   }
 }
 
-function buildRail() {
+function buildRail(shell, collapsed) {
   const nav = el('div', { className: 'rail__nav' }, ...NAV.map(railItem));
   const logo = el(
     'button',
-    { className: 'rail__logo', title: 'Главная', type: 'button', onClick: () => appState.navigateTo('home') },
+    { className: 'rail__logo', title: 'Главная', 'aria-label': 'MossLauncher — Главная', type: 'button', onClick: () => appState.navigateTo('home') },
     el('img', { src: asset('branding', 'mark-sage@2x.png'), alt: '' }),
     el('span', {}, 'MossLauncher')
   );
   const foot = el('div', { className: 'rail__foot' }, railItem({ id: 'accounts', icon: 'account', title: 'Аккаунты' }), railItem({ id: 'settings', icon: 'settings', title: 'Настройки' }));
-  return el('div', { className: 'rail' }, logo, nav, foot);
+  const toggle = el('button', { className: 'rail__toggle', type: 'button', 'aria-controls': 'launcher-navigation' },
+    icon('chevron-left'), el('span', {}, 'Свернуть меню'));
+  function showCollapsed(value) {
+    collapsed = value;
+    shell.classList.toggle('rail-collapsed', value);
+    toggle.title = value ? 'Развернуть меню' : 'Свернуть меню';
+    toggle.setAttribute('aria-label', toggle.title);
+    toggle.setAttribute('aria-expanded', String(!value));
+  }
+  showCollapsed(collapsed);
+  appState.subscribe(({ settings }) => {
+    const next = settings.railCollapsed === true;
+    if (next !== collapsed) showCollapsed(next);
+  });
+  toggle.onclick = () => {
+    const railCollapsed = !collapsed;
+    appState.update({ settings: { ...appState.state.settings, railCollapsed } });
+    window.moss.settings.set({ railCollapsed }).catch(error => {
+      appState.toast(error.message, 'error', 'Не удалось сохранить вид меню');
+    });
+  };
+  return el('nav', { className: 'rail', id: 'launcher-navigation', 'aria-label': 'Меню лаунчера' }, logo, toggle, nav, foot);
 }
 
 function railItem(item) {
@@ -105,6 +131,7 @@ function railItem(item) {
     {
       className: `rail__item${appState.state.currentView === item.id ? ' is-active' : ''}`,
       'data-view': item.id,
+      'aria-label': item.title,
       title: item.title,
       type: 'button',
       onClick: () => appState.navigateTo(item.id),

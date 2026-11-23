@@ -1,35 +1,6 @@
-/* Geometry shared with assets/mosslauncher-complete/screens/home-screen.png. */
-:root { --font: "Segoe UI", system-ui, sans-serif; }
-.shell { grid-template-columns: 224px minmax(0,1fr); }
-.shell::before,.shell::after { display:none; }
-.rail { align-items:stretch; padding:20px 16px; background:#141C16; }
-.rail__logo { display:flex; align-items:center; gap:10px; width:100%; height:44px; font-size:19px; font-weight:600; margin-bottom:30px; }
-.rail__logo img { width:36px; height:36px; }
-.rail__nav,.rail__foot { align-items:stretch; }
-.rail__item { width:100%; display:flex; align-items:center; justify-content:flex-start; gap:14px; padding:0 14px; height:48px; }
-.rail__item__tip,.rail__item:hover .rail__item__tip { position:static; transform:none; opacity:1; padding:0; background:none; border:0; box-shadow:none; color:inherit; font-size:14px; font-weight:400; }
-.rail__item.is-active { background:#35452E; box-shadow:inset 0 0 0 1px #AAC68B; }
-.rail__item.is-active::before { display:none; }
-.home { display:grid; grid-template-columns:1fr; grid-template-rows:90px minmax(380px,1fr) auto; gap:22px; padding:0 32px 32px; isolation:isolate; overflow:auto; min-height:690px; }
-.home__art { top:112px; left:32px; right:32px; bottom:174px; border:1px solid var(--border); border-radius:18px; overflow:hidden; z-index:-1; }
-.home__art img { transform:none; object-position:center; }
-.home__art::after { background:linear-gradient(90deg,rgba(16,22,18,.95),rgba(16,22,18,.55) 48%,rgba(16,22,18,.08)); }
-.home__lead { grid-row:2; grid-column:1; padding:30px; align-self:center; }
-.home__title { font-size:44px; line-height:1.15; }
-.home__greeting { min-height: 233.05px; display: flex; flex-direction: column; gap: 12px; }
-.home__greeting-title { overflow-wrap: anywhere; }
-.home__topline { position:static; grid-row:1; grid-column:1; justify-content:flex-end; }
-.home__side { grid-row:3; grid-column:1; padding:0; flex-direction:row; gap:16px; }
-.home__card { flex:1; background:var(--surface); min-height:110px; }
-.home__card__title,.home__card__meta { display:block; }
-.play { box-shadow:none; border-radius:10px; }
-.play__meta { display:none; }
 .settings__grid { min-width:0; }
 .settings__grid .input-group { flex-wrap:wrap; }
 .settings__grid .input { min-width:120px; flex:1; }
-@media(max-width:1150px) { .shell { grid-template-columns:200px 1fr; } .home { padding-left:24px;padding-right:24px; } .home__art {left:24px;right:24px;} .home__side {flex-wrap:wrap;} .home__card {min-width:180px;} }
-/* Keep download updates from moving the launch controls. */
-.home__progress-wrap { min-height: 54px; }
 .version-menu { z-index: 10000; overflow-y: auto; margin: 0; }
 .mods__target { margin-bottom: 20px; padding: 16px; }
 .mods__target label { display: flex; align-items: center; gap: 16px; }
