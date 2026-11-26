@@ -99,3 +99,29 @@ test('connection timeout retries IPv4 and preserves URL in errors', async t => {
  t.mock.method(https,'get',(url,opts,cb)=>{const req=new EventEmitter();req.setTimeout=()=>{};families.push(opts.family);queueMicrotask(()=>{if(!opts.family||fail)req.emit('error',Object.assign(new AggregateError([]),{code:'ETIMEDOUT'}));else{const res=Readable.from([Buffer.from('ok')]);res.statusCode=200;cb(res);}});return req;});
  const url=catalog.fileUrl(server);assert.equal((await remote.read(url,{maxBytes:10})).toString(),'ok');assert.deepEqual(families,[undefined,4]);fail=true;await assert.rejects(remote.read(url,{maxBytes:10}),e=>e.message.includes(url));
 });
+
+test('Timeweb serves catalog, pinned index and verified payload when GitHub is unavailable', async t => {
+  const https = require('https'), { Readable } = require('stream'), { EventEmitter } = require('events');
+  const payload = file('mods/mirror.jar', 'mirror-test');
+  const seen = [];
+  t.mock.method(https, 'get', (url, opts, cb) => {
+    const req = new EventEmitter();
+    req.setTimeout = () => {};
+    queueMicrotask(() => {
+      const github = url.hostname === 'raw.githubusercontent.com';
+      if (!github) seen.push(url.pathname);
+      const res = Readable.from([Buffer.from('mirror-test')]);
+      res.statusCode = github ? 503 : 200;
+      cb(res);
+    });
+    return req;
+  });
+  const opts = { maxBytes: 30 };
+  await remote.read(catalog.CATALOG_URL, opts);
+  await remote.read(catalog.fileUrl(server), opts);
+  const dest = path.join(fixture(t).root, 'download.jar');
+  await remote.file(catalog.fileUrl(server, payload.path), dest, payload);
+  assert.equal(fs.readFileSync(dest, 'utf8'), 'mirror-test');
+  const prefix = '/16ea7843-721c-40d2-8233-7e888b857134/';
+  assert.deepEqual(seen, ['launcher/servers.json', server.pack.commit + '/pack-index.json', 'objects/' + payload.sha256].map(key => prefix + key));
+});

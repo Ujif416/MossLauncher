@@ -69,7 +69,7 @@ function fileUrl(server, file = 'pack-index.json') {
 let current = validateCatalog(bundled), inflight;
 async function refresh(cacheFile) {
   if (inflight) return inflight;
-  inflight = remote.read(CATALOG_URL, { maxBytes: 128 * 1024, signal: AbortSignal.timeout(25000) }).then(bytes => {
+  inflight = remote.read(CATALOG_URL, { maxBytes: 128 * 1024, signal: AbortSignal.timeout(45000), validate: bytes => validateCatalog(JSON.parse(bytes)) }).then(bytes => {
     current = validateCatalog(JSON.parse(bytes));
     if (cacheFile) {
       try { noLinks(cacheFile); noLinks(cacheFile + '.tmp'); fs.mkdirSync(path.dirname(cacheFile), { recursive: true }); fs.writeFileSync(cacheFile + '.tmp', bytes); fs.renameSync(cacheFile + '.tmp', cacheFile); } catch { /* A read-only cache does not prevent launching. */ }
@@ -79,7 +79,7 @@ async function refresh(cacheFile) {
     if (cacheFile) {
       try { noLinks(cacheFile); if (fs.statSync(cacheFile).size <= 128 * 1024) current = validateCatalog(JSON.parse(fs.readFileSync(cacheFile, 'utf8'))); } catch { /* Keep the validated bundled/in-memory catalog. */ }
     }
-    return { catalog: current, error: require('./errors').describe(error).message, warning: 'Каталог GitHub недоступен. Используется сохранённая конфигурация сервера.' };
+    return { catalog: current, error: require('./errors').describe(error).message, warning: 'Источники каталога недоступны. Используется сохранённая конфигурация сервера.' };
   }).finally(() => { inflight = null; });
   return inflight;
 }
@@ -92,8 +92,8 @@ async function index(server, signal, cacheFile) {
       if (hash(cached) === server.pack.indexSha256) return validateIndex(JSON.parse(cached), server);
     }
   }
-  const bytes = await remote.read(fileUrl(server), { maxBytes: 8 * 1024 * 1024, signal });
-  check(hash(bytes) === server.pack.indexSha256, 'Контрольная сумма списка файлов не совпала');
+  const bytes = await remote.read(fileUrl(server), { maxBytes: 8 * 1024 * 1024, signal,
+    validate: data => check(hash(data) === server.pack.indexSha256, 'Контрольная сумма списка файлов не совпала') });
   const files = validateIndex(JSON.parse(bytes), server);
   if (cacheFile) { noLinks(cacheFile + '.tmp'); fs.mkdirSync(path.dirname(cacheFile), { recursive: true }); fs.writeFileSync(cacheFile + '.tmp', bytes); fs.renameSync(cacheFile + '.tmp', cacheFile); }
   return files;

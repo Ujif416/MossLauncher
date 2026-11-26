@@ -1,6 +1,6 @@
 {
   "name": "mosslauncher",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Modern Minecraft Java Edition launcher with Microsoft auth, mod management, and modpack sync",
   "main": "src/main/index.js",
   "scripts": {

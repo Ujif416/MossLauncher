@@ -77,7 +77,7 @@ function runtimeReady(server, s) {
 async function run(id, controller) {
   const latest = await catalog.refresh(path.join(PATHS.cacheDir, 'server-catalog.json'));
   controller.signal.throwIfAborted();
-  if (latest.warning) throw new Error('Не удалось проверить обновления сборки на GitHub. Нажмите «Повторить». ' + (latest.error || ''));
+  if (latest.warning) throw new Error('Не удалось проверить обновления сборки через GitHub и Timeweb. Нажмите «Повторить». ' + (latest.error || ''));
   const server = catalog.get(id), preferences = settings.getSettings(), p = dirs(id, preferences);
   const s = { ...preferences, gameDir: p.runtime };
   const signal = controller.signal;
