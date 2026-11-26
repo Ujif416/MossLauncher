@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -16,6 +17,12 @@ def publish():
         raise SystemExit('Configure TWC_ACCESS_KEY_ID and TWC_SECRET_ACCESS_KEY in GitHub Actions.')
     s3 = boto3.client('s3', endpoint_url='https://s3.twcstorage.ru', region_name='ru-1',
                       config=Config(s3={'addressing_style': 'path'}, request_checksum_calculation='when_required'))
+    if sys.argv[1:] == ['installers']:
+        for asset in Path('release').iterdir():
+            s3.upload_file(str(asset), BUCKET, 'launcher/releases/1.0.15/' + asset.name)
+        return
+    if sys.argv[1:] != ['pack']:
+        raise SystemExit('Choose pack or installers')
     catalog = Path('launcher/servers.json').read_bytes()
     server = next(s for s in json.loads(catalog)['servers'] if s['id'] == 'create-skybound')
     pack = server['pack']
@@ -42,8 +49,6 @@ def publish():
             pass
     s3.put_object(Bucket=BUCKET, Key=pack['commit'] + '/pack-index.json', Body=index,
                   ContentType='application/json')
-    for asset in Path('release').iterdir():
-        s3.upload_file(str(asset), BUCKET, 'launcher/releases/1.0.15/' + asset.name)
     s3.put_object(Bucket=BUCKET, Key='launcher/servers.json', Body=catalog,
                   ContentType='application/json', CacheControl='no-cache')
     print('Published', server['packRevision'], 'with', len(entries), 'unique files')
